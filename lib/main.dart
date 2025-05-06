@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:project_acne_scan/services/acne_detector.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:project_acne_scan/services/result_model.dart';
 
 import 'package:project_acne_scan/screens/result_screen.dart';
 import 'package:project_acne_scan/screens/scan_screen.dart';
@@ -47,14 +48,17 @@ class MyApp extends StatelessWidget {
         '/scan': (context) =>
             ScanScreen(imagePaths: ['path_to_your_image_file']),
         '/analysis': (context) => ResultScreen(
-              imagePaths: [
-                'path_to_your_image_file'
-              ], // ✅ ต้องเป็น List<String>
+              imagePaths: ['path_to_your_image_file'],
               detectionResultsPerImage: [
-                []
-              ], // ✅ ต้องส่งมาให้ครบตาม constructor
-              pimpleTypes: {}, // ✅ ต้องส่ง map ตาม type
-              careInstructions: 'ดูแลรักษาให้สะอาดเป็นประจำ', // ✅ string
+                ImageAnalysisResult(
+                  results: [],
+
+                  renderedImagePath: null,
+                  pimpleCounts: {}, // ✅ เพิ่มตรงนี้
+                ),
+              ],
+              pimpleTypes: {},
+              careInstructions: 'ดูแลรักษาให้สะอาดเป็นประจำ',
             ),
         '/history': (context) => HistoryScreen(),
         '/settings': (context) => SettingsScreen(),

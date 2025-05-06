@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project_acne_scan/screens/result_screen.dart';
-import 'package:project_acne_scan/services/acne_detector.dart';
 import 'package:project_acne_scan/services/result_model.dart';
+import 'package:project_acne_scan/services/roboflow_service.dart';
 
 class ScanScreen extends StatefulWidget {
   final List<String> imagePaths;
@@ -38,7 +38,7 @@ class _ScanScreenState extends State<ScanScreen> {
     'Whitehead': 0,
   };
 
-  List<List<Result>> detectionResultsPerImage = [];
+  List<ImageAnalysisResult> detectionResultsPerImage = [];
 
   @override
   void initState() {
@@ -90,29 +90,42 @@ class _ScanScreenState extends State<ScanScreen> {
       pimpleTypes.updateAll((key, value) => 0);
     });
 
-    final detector = await AcneDetector.create();
+    for (int i = 0; i < _images.length; i++) {
+  final image = _images[i];
+  try {
+    print('[📤] กำลังส่งภาพ ${i + 1}/${_images.length}: ${image.path}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("กำลังวิเคราะห์ภาพ ${i + 1}/${_images.length}..."),
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
 
-    for (final image in _images) {
-      final results = await detector.detect(File(image.path));
-      List<Result> imageResults = [];
+    final analysis = await RoboflowService.analyzeImage(File(image.path));
+    detectionResultsPerImage.add(analysis);
 
-      for (final result in results) {
-        if (pimpleTypes.containsKey(result.label)) {
-          pimpleTypes[result.label] = (pimpleTypes[result.label] ?? 0) + 1;
-        }
-
-        imageResults.add(Result(
-          label: result.label,
-          confidence: result.confidence,
-          rect: result.rect,
-        ));
+    // ✅ รวมจำนวนสิวจากภาพนี้เข้ากับ pimpleTypes
+    analysis.pimpleCounts.forEach((type, count) {
+      if (pimpleTypes.containsKey(type)) {
+        pimpleTypes[type] = pimpleTypes[type]! + count;
+      } else {
+        pimpleTypes[type] = count;
       }
+    });
 
-      detectionResultsPerImage.add(imageResults);
-    }
+    print('[✅] วิเคราะห์เสร็จ: ${image.name}');
+  } catch (e) {
+    print('[❌] วิเคราะห์ล้มเหลว: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("วิเคราะห์ภาพล้มเหลว: ${image.name}"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 
     setState(() => _isAnalyzing = false);
-
     _showResultDialog();
   }
 
@@ -224,8 +237,8 @@ class _ScanScreenState extends State<ScanScreen> {
                   onPressed: _isAnalyzing ? null : _startAnalysis,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF06D1D0),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 16),
                   ),
                   child: const Text(
                     "วิเคราะห์สิว",
